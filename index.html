@@ -9,7 +9,6 @@
   body { background: #090e1a; color: #f8fafc; padding: 6px 8px; font-size: 11px; }
   .wrap { width: 100%; max-width: 1280px; margin: 0 auto; }
 
-  /* POP-UP TOAST RINGAN (TIDAK BLOKIR KLIK) */
   .toast-wrap {
     position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
     z-index: 250; pointer-events: none; display: flex; flex-direction: column; gap: 6px; align-items: center;
@@ -319,6 +318,7 @@
   var timeLeft = 0;
   var isPaused = false;
   var warned10Sec = false;
+  var spokenSecMap = {};
   var soundEnabled = true;
   var audioCtx = null;
   var toastTimer = null;
@@ -349,7 +349,6 @@
     if (b) { b.innerText = msg; }
   }
 
-  /* NADA & SUARA BICARA (WEB AUDIO + SPEECH SYNTHESIS) */
   function getAudioCtx() {
     if (!soundEnabled) return null;
     var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -378,14 +377,16 @@
     osc.stop(now + (duration || 0.18) + 0.02);
   }
 
-  function speakText(text) {
+  function speakText(text, rateOverride, interrupt) {
     if (!soundEnabled || !text) return;
     if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') return;
     try {
-      window.speechSynthesis.cancel();
+      if (interrupt) {
+        window.speechSynthesis.cancel();
+      }
       var utter = new SpeechSynthesisUtterance(String(text));
       utter.lang = 'id-ID';
-      utter.rate = 1.05;
+      utter.rate = rateOverride || 1.05;
       utter.pitch = 1.0;
       utter.volume = 1.0;
       window.speechSynthesis.speak(utter);
@@ -396,20 +397,19 @@
     playTone(523.25, 0.00, 0.14, 'triangle', 0.18);
     playTone(659.25, 0.11, 0.14, 'triangle', 0.18);
     playTone(783.99, 0.22, 0.24, 'triangle', 0.20);
-    setTimeout(function() { speakText('Lele dimulai'); }, 220);
+    setTimeout(function() { speakText('Lele dimulai', 1.05, true); }, 220);
   }
 
-  function soundWarn10Sec() {
-    playTone(880.00, 0.00, 0.11, 'square', 0.10);
-    playTone(880.00, 0.15, 0.11, 'square', 0.10);
-    setTimeout(function() { speakText('Waktu sisa 10 detik'); }, 180);
+  function soundTickCountdown(secNum) {
+    playTone(secNum <= 3 ? 1046.50 : 880.00, 0.00, 0.08, 'square', 0.08);
+    speakText(String(secNum), 1.25, false);
   }
 
   function soundFinishAuction() {
     playTone(783.99, 0.00, 0.14, 'triangle', 0.18);
     playTone(659.25, 0.13, 0.14, 'triangle', 0.18);
     playTone(523.25, 0.26, 0.28, 'triangle', 0.20);
-    setTimeout(function() { speakText('Waktu selesai'); }, 260);
+    setTimeout(function() { speakText('Waktu selesai', 1.05, true); }, 260);
   }
 
   function soundSeatSaved(isBin, spokenLabel, seatId) {
@@ -423,7 +423,7 @@
     }
     if (spokenLabel && seatId) {
       setTimeout(function() {
-        speakText(spokenLabel + ' berada di kursi ' + seatId);
+        speakText(spokenLabel + ' berada di kursi ' + seatId, 1.05, true);
       }, 180);
     }
   }
@@ -442,7 +442,6 @@
     }
   }
 
-  /* POP-UP BANNER OTOMATIS HILANG */
   function showPopup(tag, message, themeClass) {
     var wrap = document.getElementById('toastWrap');
     if (!wrap) return;
@@ -931,12 +930,18 @@
     clearInterval(timerInterval);
     timeLeft = sec;
     isPaused = false;
-    warned10Sec = (sec <= 10);
+    warned10Sec = false;
+    spokenSecMap = {};
     document.getElementById('pauseBtn').innerText = '||';
     updateTimerDisplay();
 
     soundStartAuction();
     showPopup('MULAI LELANG', 'Lele dimulai • ' + formatSec(sec), 't-start');
+
+    if (timeLeft >= 1 && timeLeft <= 10 && !spokenSecMap[timeLeft]) {
+      spokenSecMap[timeLeft] = true;
+      soundTickCountdown(timeLeft);
+    }
 
     timerInterval = setInterval(function() {
       if (!isPaused) {
@@ -945,8 +950,16 @@
 
         if (timeLeft === 10 && !warned10Sec) {
           warned10Sec = true;
-          soundWarn10Sec();
+          spokenSecMap[10] = true;
+          playTone(880.00, 0.00, 0.10, 'square', 0.10);
           showPopup('SISA WAKTU', 'Waktu sisa 10 detik', 't-warn');
+          speakText('Waktu sisa 10 detik', 1.15, true);
+        } else if (timeLeft >= 1 && timeLeft < 10 && !spokenSecMap[timeLeft]) {
+          spokenSecMap[timeLeft] = true;
+          soundTickCountdown(timeLeft);
+          if (timeLeft <= 3) {
+            showPopup('HITUNG MUNDUR', String(timeLeft), 't-warn');
+          }
         }
 
         if (timeLeft <= 0) {
@@ -971,6 +984,7 @@
     timeLeft = 0;
     isPaused = false;
     warned10Sec = false;
+    spokenSecMap = {};
     document.getElementById('pauseBtn').innerText = '||';
     updateTimerDisplay();
   }
