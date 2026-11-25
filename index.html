@@ -162,4 +162,239 @@
 
   .modal {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.78);
-    justify-content: center; align-items: center; z-index:
+    justify-content: center; align-items: center; z-index: 100;
+  }
+  .modal.active { display: flex; }
+  .modal-content { background: #151f32; padding: 14px; border-radius: 9px; width: 335px; border: 2px solid #fbbf24; }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 8px; }
+  .modal-head h3 { color: #fbbf24; font-size: 14px; }
+  .ava-preview {
+    width: 48px; height: 48px; border-radius: 50%;
+    border: 2px solid #fbbf24; background: #0b1220;
+    overflow: hidden; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 900; color: #fbbf24; flex-shrink: 0;
+  }
+  .ava-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .ava-status { font-size: 10px; color: #94a3b8; margin-top: 3px; min-height: 13px; }
+
+  .form-group { margin-bottom: 8px; }
+  .form-group label { display: block; font-size: 10px; margin-bottom: 2px; color: #94a3b8; }
+  .form-group input[type="text"], .form-group input[type="number"] { width: 100%; padding: 5px 7px; font-size: 12px; }
+  .input-copy-row { display: flex; gap: 4px; align-items: center; }
+  .input-copy-row input { flex: 1; }
+  .ava-tools { display: flex; gap: 4px; margin-top: 4px; align-items: center; }
+  .ava-tools input[type="file"] { font-size: 10px; max-width: 185px; }
+  .quick-bids { display: flex; gap: 3px; margin-top: 4px; }
+  .quick-bids button { flex: 1; font-size: 10px; padding: 4px; }
+
+  #infoBar { margin-left: 4px; font-size: 10px; font-weight: 800; color: #34d399; }
+</style>
+</head>
+<body>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<div class="wrap">
+
+  <div class="top-bar">
+    <div class="top-left">
+      <div class="brand-title">LELE KURSI</div>
+      <div class="pills">
+        <span class="pill">OB: <span id="dOb" style="color:#fbbf24">r14</span></span>
+        <span class="pill">INC: <span id="dInc" style="color:#10b981">r1</span></span>
+        <span class="pill pill-bin">B.I.N: <span id="dBin">r16</span> &bull; <span id="dBinNote">+10 MENIT DIAWAL</span></span>
+      </div>
+    </div>
+
+    <div class="right-stats">
+      <div class="mini-stat">
+        <small>KURSI</small>
+        <strong id="dSlot">0/19</strong>
+      </div>
+      <div class="mini-stat">
+        <small>TOTAL</small>
+        <strong id="dTotal">r0</strong>
+      </div>
+      <div class="timer-box">
+        <div class="timer-txt" id="timer">00:00</div>
+        <input type="number" id="timerInput" value="30" min="1" max="999" style="width:46px; padding:4px; font-size:12px; text-align:center;">
+        <button type="button" class="b-gold" style="padding:5px 9px;font-size:12px" onclick="setTimerFromInput()">Set</button>
+        <button type="button" class="b-gray" style="padding:5px 7px;font-size:12px" onclick="togglePause()" id="pauseBtn">||</button>
+        <button type="button" class="b-red" style="padding:5px 7px;font-size:12px" onclick="stopTimer()">0</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="cfg-bar">
+    <label>Kursi:</label><input type="number" id="inCount" value="19" min="1" max="30" style="width:38px">
+    <label>OB:</label><input type="number" id="inOb" value="14" step="1" style="width:42px">
+    <label>INC:</label><input type="number" id="inInc" value="1" step="1" style="width:38px">
+    <label>B.I.N:</label><input type="number" id="inBin" value="16" step="1" style="width:42px">
+    <label>Ket. B.I.N:</label><input type="text" id="inBinNote" value="+10 MENIT DIAWAL" style="width:140px">
+    <button type="button" class="b-gold" style="padding:3px 8px" onclick="saveCfg()">Simpan</button>
+    <button type="button" class="b-blue" style="padding:3px 8px" onclick="toggleSound()" id="soundBtn">Suara: ON</button>
+    <span id="infoBar"></span>
+    <button type="button" class="b-red" style="padding:3px 8px; margin-left:auto;" onclick="resetAll()">Reset</button>
+  </div>
+
+  <div class="list-panel">
+    <div class="list-head">
+      <h2>LIST KURSI &amp; CEK</h2>
+      <div class="sum-pills">
+        <span>OKE: <strong id="wPaidCnt" style="color:#10b981">0/0</strong></span>
+        <span>CEK: <strong id="wPaidSum" style="color:#10b981">r0</strong></span>
+        <span>PENDING: <strong id="wUnpaidSum" style="color:#ef4444">r0</strong></span>
+        <button type="button" class="b-gold" style="padding:2px 7px" onclick="copyAllTikTok()">Salin TikTok</button>
+        <button type="button" class="b-blue" style="padding:2px 7px" onclick="copyAllDisplays()">Salin Display</button>
+        <button type="button" class="b-gold" style="padding:2px 7px" onclick="copyList()">Salin List</button>
+      </div>
+    </div>
+    <div class="two-col-grid">
+      <div class="col-box" id="colLeft"></div>
+      <div class="col-box" id="colRight"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="modal" id="bidModal">
+  <div class="modal-content">
+    <div class="modal-head">
+      <div>
+        <h3 id="modalTitle">Kursi #1</h3>
+        <div class="ava-status" id="avaStatus">Isi Nama TikTok &amp; Username Roblox</div>
+      </div>
+      <div class="ava-preview" id="avaPreview">?</div>
+    </div>
+
+    <div class="form-group">
+      <label>1. Nama TikTok (Bisa Di-Copy)</label>
+      <div class="input-copy-row">
+        <input type="text" id="tiktokInput" placeholder="Contoh: Creymoon...">
+        <button type="button" class="b-gold" style="padding:5px 8px;font-size:10px;" onclick="copyModalTikTok()">Copy</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>2. Display Name (Otomatis / Bisa Diedit &amp; Di-Copy)</label>
+      <div class="input-copy-row">
+        <input type="text" id="displayInput" placeholder="Display name muncul di sini...">
+        <button type="button" class="b-blue" style="padding:5px 8px;font-size:10px;" onclick="copyModalDisplay()">Copy</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>3. Username Roblox (Otomatis Cek Display &amp; Ava)</label>
+      <input type="text" id="bidderInput" placeholder="Ketik username Roblox...">
+    </div>
+    <div class="form-group">
+      <label>Avatar Cadangan (Upload Foto / URL Gambar Opsional)</label>
+      <input type="text" id="avaUrlInput" placeholder="URL gambar atau path file (opsional)...">
+      <div class="ava-tools">
+        <input type="file" id="avaFileInput" accept="image/*">
+        <button type="button" class="b-gray" style="padding:3px 6px;font-size:10px;" onclick="clearCustomAva()">Hapus Ava</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Angka (misal 14 untuk r14)</label>
+      <input type="number" id="amountInput" step="1">
+      <div class="quick-bids">
+        <button type="button" class="b-gray" onclick="addBid(1)">+1x</button>
+        <button type="button" class="b-gray" onclick="addBid(2)">+2x</button>
+        <button type="button" class="b-purple" onclick="setBinVal()">B.I.N</button>
+      </div>
+    </div>
+    <div style="display:flex; gap:5px; margin-top:10px;">
+      <button type="button" class="b-green" style="flex:1; padding:6px;" onclick="saveBid()">Simpan</button>
+      <button type="button" class="b-gray" style="padding:6px;" onclick="closeModal()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  var cfg = { count: 19, ob: 14, inc: 1, bin: 16, binNote: '+10 MENIT DIAWAL' };
+  var seats = [];
+  var activeSeatIndex = null;
+  var forceBinMode = false;
+  var timerInterval = null;
+  var timeLeft = 0;
+  var isPaused = false;
+  var spokenSecMap = {};
+  var soundEnabled = true;
+  var audioCtx = null;
+  var toastTimer = null;
+
+  var robloxCache = {};
+  var currentModalAvatar = '';
+  var manualAvatarOverride = false;
+  var manualDisplayOverride = false;
+  var lookupTimer = null;
+
+  function rFmt(n) { return 'r' + Number(n || 0); }
+
+  function esc(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function initialChar(name) {
+    var t = String(name || '').trim();
+    return t ? t.charAt(0).toUpperCase() : '?';
+  }
+
+  function setInfo(msg) {
+    var b = document.getElementById('infoBar');
+    if (b) { b.innerText = msg; }
+  }
+
+  function getAudioCtx() {
+    if (!soundEnabled) return null;
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    if (!audioCtx) audioCtx = new Ctx();
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(function() {});
+    }
+    return audioCtx;
+  }
+
+  function playTone(freq, startOffset, duration, type, gainPeak) {
+    var ctx = getAudioCtx();
+    if (!ctx) return;
+    var now = ctx.currentTime + (startOffset || 0);
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = type || 'triangle';
+    osc.frequency.setValueAtTime(freq, now);
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.exponentialRampToValueAtTime(gainPeak || 0.16, now + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + (duration || 0.18));
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + (duration || 0.18) + 0.02);
+  }
+
+  function speakText(text, rateOverride, interrupt) {
+    if (!soundEnabled || !text) return;
+    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') return;
+    try {
+      if (interrupt) {
+        window.speechSynthesis.cancel();
+      }
+      var utter = new SpeechSynthesisUtterance(String(text));
+      utter.lang = 'id-ID';
+      utter.rate = rateOverride || 1.05;
+      utter.pitch = 1.0;
+      utter.volume = 1.0;
+      window.speechSynthesis.speak(utter);
+    } catch (e) {}
+  }
+
+  function soundStartAuction() {
+    playTone(523.25, 0.00, 0.14, 'triangle', 0.18);
+    playTone(659.25, 0.11, 0.14, 'triangle', 0.18);
+    playTone(783.99, 0.22, 0.24, 'triangle', 0.20);
+    setTimeout(function() { speakText('Lele dimulai', 1.05, true); }, 220);
+  }
