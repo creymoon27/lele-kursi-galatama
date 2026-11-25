@@ -7,7 +7,33 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
   body { background: #090e1a; color: #f8fafc; padding: 6px 8px; font-size: 11px; }
-  .wrap { width: 100%; max-width: 1220px; margin: 0 auto; }
+  .wrap { width: 100%; max-width: 1280px; margin: 0 auto; }
+
+  /* POP-UP TOAST RINGAN (TIDAK BLOKIR KLIK) */
+  .toast-wrap {
+    position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+    z-index: 250; pointer-events: none; display: flex; flex-direction: column; gap: 6px; align-items: center;
+  }
+  .toast-box {
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    border: 2px solid #fbbf24; border-radius: 10px;
+    padding: 8px 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.65);
+    display: flex; align-items: center; gap: 10px;
+    opacity: 0; transform: translateY(-10px) scale(0.96);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+  }
+  .toast-box.show { opacity: 1; transform: translateY(0) scale(1); }
+  .toast-box.t-start { border-color: #10b981; }
+  .toast-box.t-warn { border-color: #ef4444; background: linear-gradient(135deg, #450a0a, #190505); }
+  .toast-box.t-bin { border-color: #a855f7; background: linear-gradient(135deg, #2e1065, #140929); }
+  .toast-tag {
+    font-size: 10px; font-weight: 900; padding: 2px 6px; border-radius: 4px;
+    background: #fbbf24; color: #000; letter-spacing: 0.4px;
+  }
+  .toast-box.t-start .toast-tag { background: #10b981; color: #000; }
+  .toast-box.t-warn .toast-tag { background: #ef4444; color: #fff; }
+  .toast-box.t-bin .toast-tag { background: #a855f7; color: #fff; }
+  .toast-msg { font-size: 14px; font-weight: 900; color: #f8fafc; white-space: nowrap; }
 
   .top-bar {
     display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px;
@@ -63,17 +89,17 @@
   .two-col-grid { display: grid; grid-template-columns: 1fr 1fr; }
   .col-box:first-child { border-right: 1px solid #2c3e5c; }
 
-  @media (max-width: 920px) {
+  @media (max-width: 980px) {
     .two-col-grid { grid-template-columns: 1fr; }
     .col-box:first-child { border-right: none; }
   }
 
   .seat-row {
     display: grid;
-    grid-template-columns: 24px minmax(95px, 1fr) minmax(88px, 118px) 42px 30px 46px auto;
+    grid-template-columns: 22px minmax(74px, 96px) minmax(74px, 96px) minmax(80px, 1fr) 40px 28px 42px auto;
     align-items: center;
-    gap: 4px;
-    padding: 3px 6px;
+    gap: 3px;
+    padding: 3px 5px;
     background: #121b2d;
     border-bottom: 1px solid #1e2d44;
   }
@@ -83,52 +109,57 @@
   .seat-row.bin-row { border-left: 3px solid #a855f7; background: #211633; }
 
   .r-no { font-weight: 900; font-size: 11px; color: #fbbf24; }
-  .player-cell { display: flex; align-items: center; gap: 5px; min-width: 0; }
 
-  .ava-box {
-    width: 22px; height: 22px; border-radius: 50%;
-    border: 1.5px solid #475569; background: #0b1220;
-    overflow: hidden; display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; font-size: 10px; font-weight: 900; color: #fbbf24;
-  }
-  .seat-row.has-bid .ava-box { border-color: #fbbf24; }
-  .seat-row.locked .ava-box { border-color: #10b981; }
-  .seat-row.bin-row .ava-box { border-color: #a855f7; }
-  .ava-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
-
-  .r-name { font-weight: 800; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
-  .r-empty { color: #64748b; font-style: italic; font-weight: 400; font-size: 10px; }
-
-  .disp-box {
-    display: flex; align-items: center; justify-content: space-between; gap: 3px;
+  .copy-box {
+    display: flex; align-items: center; justify-content: space-between; gap: 2px;
     background: #0b1220; border: 1px solid #334155; border-radius: 4px;
-    padding: 1px 4px; min-width: 0;
+    padding: 1px 3px; min-width: 0;
+  }
+  .tt-txt {
+    font-size: 10px; font-weight: 700; color: #fbbf24;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    user-select: all; cursor: text; flex: 1;
   }
   .disp-txt {
     font-size: 10px; font-weight: 700; color: #7dd3fc;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     user-select: all; cursor: text; flex: 1;
   }
-  .disp-empty { color: #475569; font-style: italic; font-weight: 400; user-select: none; }
+  .box-empty { color: #475569; font-style: italic; font-weight: 400; user-select: none; }
   .copy-mini {
     background: #1e293b; color: #e2e8f0; border: 1px solid #475569;
-    border-radius: 3px; padding: 1px 4px; font-size: 9px; font-weight: 800; flex-shrink: 0;
+    border-radius: 3px; padding: 1px 3px; font-size: 8px; font-weight: 800; flex-shrink: 0;
   }
   .copy-mini:hover { background: #38bdf8; color: #000; border-color: #38bdf8; }
 
-  .r-badge { display: inline-block; text-align: center; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 3px; background: #334155; color: #cbd5e1; }
+  .player-cell { display: flex; align-items: center; gap: 4px; min-width: 0; }
+  .ava-box {
+    width: 21px; height: 21px; border-radius: 50%;
+    border: 1.5px solid #475569; background: #0b1220;
+    overflow: hidden; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 9px; font-weight: 900; color: #fbbf24;
+  }
+  .seat-row.has-bid .ava-box { border-color: #fbbf24; }
+  .seat-row.locked .ava-box { border-color: #10b981; }
+  .seat-row.bin-row .ava-box { border-color: #a855f7; }
+  .ava-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  .r-name { font-weight: 800; font-size: 10px; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
+  .r-empty { color: #64748b; font-style: italic; font-weight: 400; font-size: 10px; }
+
+  .r-badge { display: inline-block; text-align: center; font-size: 9px; font-weight: 900; padding: 1px 3px; border-radius: 3px; background: #334155; color: #cbd5e1; }
   .badge-bid { background: #453208; color: #fbbf24; }
   .badge-lock { background: #093b2a; color: #34d399; }
   .badge-bin { background: #3b195c; color: #f3e8ff; }
 
   .r-val { font-weight: 900; font-size: 11px; color: #10b981; text-align: right; }
 
-  .pay-btn { padding: 1px 4px; border-radius: 3px; font-size: 9px; width: 100%; }
+  .pay-btn { padding: 1px 3px; border-radius: 3px; font-size: 9px; width: 100%; }
   .paid { background: #093b2a; color: #34d399; border: 1px solid #10b981; }
   .unpaid { background: #451212; color: #f87171; border: 1px solid #ef4444; }
 
   .r-actions { display: flex; gap: 2px; justify-content: flex-end; }
-  .r-actions button { padding: 2px 4px; font-size: 10px; line-height: 1.1; }
+  .r-actions button { padding: 2px 3px; font-size: 9px; line-height: 1.1; }
 
   .modal {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.78);
@@ -161,6 +192,9 @@
 </style>
 </head>
 <body>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
 <div class="wrap">
 
   <div class="top-bar">
@@ -199,6 +233,7 @@
     <label>B.I.N:</label><input type="number" id="inBin" value="16" step="1" style="width:42px">
     <label>Ket. B.I.N:</label><input type="text" id="inBinNote" value="+10 MENIT DIAWAL" style="width:140px">
     <button type="button" class="b-gold" style="padding:3px 8px" onclick="saveCfg()">Simpan</button>
+    <button type="button" class="b-blue" style="padding:3px 8px" onclick="toggleSound()" id="soundBtn">Suara: ON</button>
     <span id="infoBar"></span>
     <button type="button" class="b-red" style="padding:3px 8px; margin-left:auto;" onclick="resetAll()">Reset</button>
   </div>
@@ -210,6 +245,7 @@
         <span>OKE: <strong id="wPaidCnt" style="color:#10b981">0/0</strong></span>
         <span>CEK: <strong id="wPaidSum" style="color:#10b981">r0</strong></span>
         <span>PENDING: <strong id="wUnpaidSum" style="color:#ef4444">r0</strong></span>
+        <button type="button" class="b-gold" style="padding:2px 7px" onclick="copyAllTikTok()">Salin TikTok</button>
         <button type="button" class="b-blue" style="padding:2px 7px" onclick="copyAllDisplays()">Salin Display</button>
         <button type="button" class="b-gold" style="padding:2px 7px" onclick="copyList()">Salin List</button>
       </div>
@@ -233,19 +269,22 @@
     </div>
 
     <div class="form-group">
-      <label>1. Nama TikTok</label>
-      <input type="text" id="tiktokInput" placeholder="Contoh: @nama_tiktok...">
+      <label>1. Nama TikTok (Bisa Di-Copy)</label>
+      <div class="input-copy-row">
+        <input type="text" id="tiktokInput" placeholder="Contoh: Creymoon...">
+        <button type="button" class="b-gold" style="padding:5px 8px;font-size:10px;" onclick="copyModalTikTok()">Copy</button>
+      </div>
     </div>
     <div class="form-group">
-      <label>2. Username Roblox (Otomatis Cek Display & Ava)</label>
-      <input type="text" id="bidderInput" placeholder="Ketik username Roblox...">
-    </div>
-    <div class="form-group">
-      <label>3. Display Name (Otomatis / Bisa Diedit & Di-Copy)</label>
+      <label>2. Display Name (Otomatis / Bisa Diedit & Di-Copy)</label>
       <div class="input-copy-row">
         <input type="text" id="displayInput" placeholder="Display name muncul di sini...">
         <button type="button" class="b-blue" style="padding:5px 8px;font-size:10px;" onclick="copyModalDisplay()">Copy</button>
       </div>
+    </div>
+    <div class="form-group">
+      <label>3. Username Roblox (Otomatis Cek Display & Ava)</label>
+      <input type="text" id="bidderInput" placeholder="Ketik username Roblox...">
     </div>
     <div class="form-group">
       <label>Avatar Cadangan (Upload Foto / URL Gambar Opsional)</label>
@@ -279,6 +318,10 @@
   var timerInterval = null;
   var timeLeft = 0;
   var isPaused = false;
+  var warned10Sec = false;
+  var soundEnabled = true;
+  var audioCtx = null;
+  var toastTimer = null;
 
   var robloxCache = {};
   var currentModalAvatar = '';
@@ -304,6 +347,121 @@
   function setInfo(msg) {
     var b = document.getElementById('infoBar');
     if (b) { b.innerText = msg; }
+  }
+
+  /* NADA & SUARA BICARA (WEB AUDIO + SPEECH SYNTHESIS) */
+  function getAudioCtx() {
+    if (!soundEnabled) return null;
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    if (!audioCtx) audioCtx = new Ctx();
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(function() {});
+    }
+    return audioCtx;
+  }
+
+  function playTone(freq, startOffset, duration, type, gainPeak) {
+    var ctx = getAudioCtx();
+    if (!ctx) return;
+    var now = ctx.currentTime + (startOffset || 0);
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = type || 'triangle';
+    osc.frequency.setValueAtTime(freq, now);
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.exponentialRampToValueAtTime(gainPeak || 0.16, now + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + (duration || 0.18));
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + (duration || 0.18) + 0.02);
+  }
+
+  function speakText(text) {
+    if (!soundEnabled || !text) return;
+    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') return;
+    try {
+      window.speechSynthesis.cancel();
+      var utter = new SpeechSynthesisUtterance(String(text));
+      utter.lang = 'id-ID';
+      utter.rate = 1.05;
+      utter.pitch = 1.0;
+      utter.volume = 1.0;
+      window.speechSynthesis.speak(utter);
+    } catch (e) {}
+  }
+
+  function soundStartAuction() {
+    playTone(523.25, 0.00, 0.14, 'triangle', 0.18);
+    playTone(659.25, 0.11, 0.14, 'triangle', 0.18);
+    playTone(783.99, 0.22, 0.24, 'triangle', 0.20);
+    setTimeout(function() { speakText('Lele dimulai'); }, 220);
+  }
+
+  function soundWarn10Sec() {
+    playTone(880.00, 0.00, 0.11, 'square', 0.10);
+    playTone(880.00, 0.15, 0.11, 'square', 0.10);
+    setTimeout(function() { speakText('Waktu sisa 10 detik'); }, 180);
+  }
+
+  function soundFinishAuction() {
+    playTone(783.99, 0.00, 0.14, 'triangle', 0.18);
+    playTone(659.25, 0.13, 0.14, 'triangle', 0.18);
+    playTone(523.25, 0.26, 0.28, 'triangle', 0.20);
+    setTimeout(function() { speakText('Waktu selesai'); }, 260);
+  }
+
+  function soundSeatSaved(isBin, spokenLabel, seatId) {
+    if (isBin) {
+      playTone(659.25, 0.00, 0.12, 'sine', 0.18);
+      playTone(880.00, 0.10, 0.14, 'sine', 0.18);
+      playTone(1046.50, 0.20, 0.24, 'sine', 0.20);
+    } else {
+      playTone(587.33, 0.00, 0.12, 'sine', 0.16);
+      playTone(880.00, 0.10, 0.18, 'sine', 0.18);
+    }
+    if (spokenLabel && seatId) {
+      setTimeout(function() {
+        speakText(spokenLabel + ' berada di kursi ' + seatId);
+      }, 180);
+    }
+  }
+
+  function toggleSound() {
+    soundEnabled = !soundEnabled;
+    document.getElementById('soundBtn').innerText = soundEnabled ? 'Suara: ON' : 'Suara: OFF';
+    if (!soundEnabled && 'speechSynthesis' in window) {
+      try { window.speechSynthesis.cancel(); } catch (e) {}
+    }
+    if (soundEnabled) {
+      playTone(659.25, 0, 0.12, 'sine', 0.14);
+      setInfo('Suara & bicara aktif');
+    } else {
+      setInfo('Suara dimatikan');
+    }
+  }
+
+  /* POP-UP BANNER OTOMATIS HILANG */
+  function showPopup(tag, message, themeClass) {
+    var wrap = document.getElementById('toastWrap');
+    if (!wrap) return;
+    clearTimeout(toastTimer);
+    wrap.innerHTML = '<div class="toast-box ' + (themeClass || '') + '" id="activeToast">' +
+      '<span class="toast-tag">' + esc(tag) + '</span>' +
+      '<span class="toast-msg">' + esc(message) + '</span>' +
+    '</div>';
+    requestAnimationFrame(function() {
+      var el = document.getElementById('activeToast');
+      if (el) el.className = 'toast-box ' + (themeClass || '') + ' show';
+    });
+    toastTimer = setTimeout(function() {
+      var el = document.getElementById('activeToast');
+      if (el) el.className = 'toast-box ' + (themeClass || '');
+      setTimeout(function() {
+        if (wrap) wrap.innerHTML = '';
+      }, 220);
+    }, 2300);
   }
 
   function copyTextSafe(txt, doneMsg) {
@@ -357,21 +515,44 @@
     return '<div class="ava-box">' + esc(fallbackText) + '</div>';
   }
 
+  function renderTikTokCell(seat, idx) {
+    var tName = (seat.tiktok || '').trim();
+    if (!tName) {
+      return '<div class="copy-box"><span class="tt-txt box-empty">-</span></div>';
+    }
+    return '<div class="copy-box" title="TikTok: ' + esc(tName) + '">' +
+      '<span class="tt-txt">' + esc(tName) + '</span>' +
+      '<button type="button" class="copy-mini" onclick="copySeatTikTok(' + idx + ')">Copy</button>' +
+    '</div>';
+  }
+
   function renderDisplayCell(seat, idx) {
     var dName = (seat.displayName || '').trim();
     if (!dName) {
-      return '<div class="disp-box"><span class="disp-txt disp-empty">-</span></div>';
+      return '<div class="copy-box"><span class="disp-txt box-empty">-</span></div>';
     }
-    return '<div class="disp-box" title="' + esc(dName) + '">' +
+    return '<div class="copy-box" title="Display: ' + esc(dName) + '">' +
       '<span class="disp-txt">' + esc(dName) + '</span>' +
       '<button type="button" class="copy-mini" onclick="copySeatDisplay(' + idx + ')">Copy</button>' +
     '</div>';
+  }
+
+  function copySeatTikTok(idx) {
+    var st = seats[idx];
+    if (!st || !st.tiktok) return;
+    copyTextSafe(st.tiktok.trim(), 'TikTok #' + st.id + ' tersalin!');
   }
 
   function copySeatDisplay(idx) {
     var st = seats[idx];
     if (!st || !st.displayName) return;
     copyTextSafe(st.displayName.trim(), 'Display #' + st.id + ' tersalin!');
+  }
+
+  function copyModalTikTok() {
+    var val = document.getElementById('tiktokInput').value.trim();
+    if (!val) return;
+    copyTextSafe(val, 'TikTok tersalin!');
   }
 
   function copyModalDisplay() {
@@ -389,7 +570,7 @@
     var idx = 0;
     while (idx < seats.length) {
       var st = seats[idx];
-      var labelSource = st.name || st.tiktok;
+      var labelSource = st.name || st.tiktok || st.displayName;
       if (labelSource) {
         filled++;
         total += Number(st.val || 0);
@@ -409,20 +590,18 @@
       var cached = st.name ? robloxCache[st.name.toLowerCase()] : null;
       var avaUrl = st.avatarUrl || (cached && cached.avatarUrl) || '';
       var avaHtml = labelSource
-        ? renderAvatarBox(avaUrl, initialChar(labelSource))
+        ? renderAvatarBox(avaUrl, initialChar(st.name || st.displayName || st.tiktok))
         : '<div class="ava-box" style="color:#64748b;">•</div>';
 
-      var titleParts = [];
-      if (st.tiktok) titleParts.push('TT: ' + st.tiktok);
-      if (st.name) titleParts.push('RBLX: ' + st.name);
-      var nameHtml = labelSource
-        ? '<div class="r-name" title="' + esc(titleParts.join(' | ')) + '">' + esc(labelSource) + '</div>'
-        : '<div class="r-name r-empty">Kosong</div>';
+      var usnHtml = st.name
+        ? '<div class="r-name" title="Roblox: ' + esc(st.name) + '">' + esc(st.name) + '</div>'
+        : '<div class="r-name r-empty">' + ((st.tiktok || st.displayName) ? '-' : 'Kosong') + '</div>';
 
       var oneRow = '<div class="' + rowCls + '">' +
         '<div class="r-no">#' + st.id + '</div>' +
-        '<div class="player-cell">' + avaHtml + nameHtml + '</div>' +
+        renderTikTokCell(st, idx) +
         renderDisplayCell(st, idx) +
+        '<div class="player-cell">' + avaHtml + usnHtml + '</div>' +
         '<div><span class="r-badge ' + bCls + '">' + badge + '</span></div>' +
         '<div class="r-val">' + (st.val > 0 ? rFmt(st.val) : rFmt(cfg.ob)) + '</div>' +
         '<div>' + payHtml + '</div>' +
@@ -607,8 +786,8 @@
       ? 'B.I.N Kursi #' + seat.id + ' (' + rFmt(cfg.bin) + ')'
       : 'TAKE Kursi #' + seat.id;
     document.getElementById('tiktokInput').value = seat.tiktok || '';
-    document.getElementById('bidderInput').value = seat.name || '';
     document.getElementById('displayInput').value = seat.displayName || '';
+    document.getElementById('bidderInput').value = seat.name || '';
     document.getElementById('amountInput').value = isBinAction
       ? Number(cfg.bin)
       : (seat.val > 0 ? Number(seat.val) + Number(cfg.inc) : Number(cfg.ob));
@@ -619,7 +798,7 @@
     if (isData || savedAva) manualAvatarOverride = true;
     if (seat.displayName) manualDisplayOverride = true;
 
-    updateModalPreview(savedAva, seat.name || seat.tiktok || '');
+    updateModalPreview(savedAva, seat.name || seat.displayName || seat.tiktok || '');
     document.getElementById('avaStatus').innerText = seat.name
       ? 'Mengecek Display & Ava...'
       : 'Isi Nama TikTok & Username Roblox';
@@ -651,45 +830,69 @@
 
   function saveBid() {
     if (activeSeatIndex === null) return;
+    var idx = activeSeatIndex;
     var tt = document.getElementById('tiktokInput').value.trim();
-    var name = document.getElementById('bidderInput').value.trim();
     var disp = document.getElementById('displayInput').value.trim();
+    var name = document.getElementById('bidderInput').value.trim();
     var urlInput = document.getElementById('avaUrlInput').value.trim();
     var val = Number(document.getElementById('amountInput').value || 0);
 
-    if (!tt && !name) {
-      seats[activeSeatIndex] = makeSeat(activeSeatIndex, null);
+    var savedBin = false;
+    var whoLabel = '';
+    var spokenName = '';
+
+    if (!tt && !name && !disp) {
+      seats[idx] = makeSeat(idx, null);
     } else {
       var cached = name ? robloxCache[name.toLowerCase()] : null;
       var finalDisp = disp || (cached && cached.displayName) || '';
       var finalAva = urlInput || currentModalAvatar || (cached && cached.avatarUrl) || '';
 
-      seats[activeSeatIndex].tiktok = tt;
-      seats[activeSeatIndex].name = name;
-      seats[activeSeatIndex].displayName = finalDisp;
-      seats[activeSeatIndex].avatarUrl = finalAva;
-      seats[activeSeatIndex].val = val;
+      seats[idx].tiktok = tt;
+      seats[idx].name = name;
+      seats[idx].displayName = finalDisp;
+      seats[idx].avatarUrl = finalAva;
+      seats[idx].val = val;
       if (forceBinMode || val >= Number(cfg.bin)) {
-        seats[activeSeatIndex].isBin = true;
-        seats[activeSeatIndex].locked = true;
+        seats[idx].isBin = true;
+        seats[idx].locked = true;
+        savedBin = true;
       } else {
-        seats[activeSeatIndex].isBin = false;
+        seats[idx].isBin = false;
       }
+      whoLabel = finalDisp || tt || name;
+      spokenName = finalDisp || name || tt;
     }
+
     render();
     closeModal();
+
+    if (whoLabel) {
+      soundSeatSaved(savedBin, spokenName, idx + 1);
+      if (savedBin) {
+        showPopup('B.I.N LOCK', whoLabel + ' berada di kursi #' + (idx + 1) + ' (' + rFmt(val) + ')', 't-bin');
+      } else {
+        showPopup('KURSI TERSIMPAN', whoLabel + ' berada di kursi #' + (idx + 1) + ' (' + rFmt(val) + ')', '');
+      }
+    }
   }
 
   function quickBump(index) {
     var st = seats[index];
-    if (st.locked || (!st.name && !st.tiktok)) return;
+    if (st.locked || (!st.name && !st.tiktok && !st.displayName)) return;
     st.val = Number(st.val || 0) + Number(cfg.inc);
+    var hitBin = false;
     if (st.val >= Number(cfg.bin)) {
       st.val = Number(cfg.bin);
       st.isBin = true;
       st.locked = true;
+      hitBin = true;
     }
     render();
+    var who = st.displayName || st.tiktok || st.name;
+    var spoken = st.displayName || st.name || st.tiktok;
+    soundSeatSaved(hitBin, spoken, st.id);
+    showPopup(hitBin ? 'B.I.N LOCK' : 'UPDATE KURSI', who + ' berada di kursi #' + st.id + ' (' + rFmt(st.val) + ')', hitBin ? 't-bin' : '');
   }
 
   function toggleLock(index) {
@@ -699,7 +902,7 @@
   }
 
   function togglePaid(index) {
-    if (!seats[index].name && !seats[index].tiktok) return;
+    if (!seats[index].name && !seats[index].tiktok && !seats[index].displayName) return;
     seats[index].paid = !seats[index].paid;
     render();
   }
@@ -714,23 +917,44 @@
     setInfo('Tersimpan!');
   }
 
+  function formatSec(sec) {
+    var mins = String(Math.floor(sec / 60));
+    if (mins.length < 2) mins = '0' + mins;
+    var secs = String(sec % 60);
+    if (secs.length < 2) secs = '0' + secs;
+    return mins + ':' + secs;
+  }
+
   function setTimerFromInput() {
     var sec = Number(document.getElementById('timerInput').value);
     if (!sec || sec <= 0) return;
     clearInterval(timerInterval);
     timeLeft = sec;
     isPaused = false;
+    warned10Sec = (sec <= 10);
     document.getElementById('pauseBtn').innerText = '||';
     updateTimerDisplay();
+
+    soundStartAuction();
+    showPopup('MULAI LELANG', 'Lele dimulai • ' + formatSec(sec), 't-start');
 
     timerInterval = setInterval(function() {
       if (!isPaused) {
         timeLeft--;
         updateTimerDisplay();
+
+        if (timeLeft === 10 && !warned10Sec) {
+          warned10Sec = true;
+          soundWarn10Sec();
+          showPopup('SISA WAKTU', 'Waktu sisa 10 detik', 't-warn');
+        }
+
         if (timeLeft <= 0) {
           timeLeft = 0;
           updateTimerDisplay();
           clearInterval(timerInterval);
+          soundFinishAuction();
+          showPopup('WAKTU SELESAI', 'Waktu selesai', 't-warn');
         }
       }
     }, 1000);
@@ -746,18 +970,32 @@
     clearInterval(timerInterval);
     timeLeft = 0;
     isPaused = false;
+    warned10Sec = false;
     document.getElementById('pauseBtn').innerText = '||';
     updateTimerDisplay();
   }
 
   function updateTimerDisplay() {
     var el = document.getElementById('timer');
-    var mins = String(Math.floor(timeLeft / 60));
-    if (mins.length < 2) mins = '0' + mins;
-    var secs = String(timeLeft % 60);
-    if (secs.length < 2) secs = '0' + secs;
-    el.innerText = mins + ':' + secs;
-    el.className = (timeLeft <= 5 && timeLeft > 0) ? 'timer-txt warn' : 'timer-txt';
+    el.innerText = formatSec(timeLeft);
+    el.className = (timeLeft <= 10 && timeLeft > 0) ? 'timer-txt warn' : 'timer-txt';
+  }
+
+  function copyAllTikTok() {
+    var lines = [];
+    var idx = 0;
+    while (idx < seats.length) {
+      var s = seats[idx];
+      if (s.tiktok && s.tiktok.trim()) {
+        lines.push('#' + s.id + ': ' + s.tiktok.trim());
+      }
+      idx++;
+    }
+    if (!lines.length) {
+      setInfo('Belum ada Nama TikTok!');
+      return;
+    }
+    copyTextSafe(lines.join('\n'), 'Semua TikTok tersalin!');
   }
 
   function copyAllDisplays() {
@@ -782,13 +1020,13 @@
     var idx = 0;
     while (idx < seats.length) {
       var s = seats[idx];
-      if (!s.name && !s.tiktok) {
+      if (!s.name && !s.tiktok && !s.displayName) {
         lines.push('#' + s.id + ': -');
       } else {
         var parts = [];
         if (s.tiktok) parts.push('TT: ' + s.tiktok);
-        if (s.name) parts.push('RBLX: ' + s.name);
         if (s.displayName) parts.push('Display: ' + s.displayName);
+        if (s.name) parts.push('USN: ' + s.name);
         lines.push('#' + s.id + ': ' + parts.join(' | ') + ' [' + rFmt(s.val) + (s.isBin ? ' B.I.N' : '') + '] - ' + (s.paid ? 'OKE' : 'WAIT'));
       }
       idx++;
