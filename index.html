@@ -398,3 +398,677 @@
     playTone(783.99, 0.22, 0.24, 'triangle', 0.20);
     setTimeout(function() { speakText('Lele dimulai', 1.05, true); }, 220);
   }
+
+  function soundTickCountdown(secNum) {
+    playTone(secNum <= 3 ? 1046.50 : 880.00, 0.00, 0.08, 'square', 0.08);
+    speakText(String(secNum), 1.25, false);
+  }
+
+  function soundFinishAuction() {
+    playTone(783.99, 0.00, 0.14, 'triangle', 0.18);
+    playTone(659.25, 0.13, 0.14, 'triangle', 0.18);
+    playTone(523.25, 0.26, 0.28, 'triangle', 0.20);
+    setTimeout(function() { speakText('Waktu selesai', 1.05, true); }, 260);
+  }
+
+  function soundSeatSaved(isBin, spokenLabel, seatId) {
+    if (isBin) {
+      playTone(659.25, 0.00, 0.12, 'sine', 0.18);
+      playTone(880.00, 0.10, 0.14, 'sine', 0.18);
+      playTone(1046.50, 0.20, 0.24, 'sine', 0.20);
+    } else {
+      playTone(587.33, 0.00, 0.12, 'sine', 0.16);
+      playTone(880.00, 0.10, 0.18, 'sine', 0.18);
+    }
+    if (spokenLabel && seatId) {
+      setTimeout(function() {
+        speakText(spokenLabel + ' berada di kursi ' + seatId, 1.05, true);
+      }, 180);
+    }
+  }
+
+  function toggleSound() {
+    soundEnabled = !soundEnabled;
+    document.getElementById('soundBtn').innerText = soundEnabled ? 'Suara: ON' : 'Suara: OFF';
+    if (!soundEnabled && 'speechSynthesis' in window) {
+      try { window.speechSynthesis.cancel(); } catch (e) {}
+    }
+    if (soundEnabled) {
+      playTone(659.25, 0, 0.12, 'sine', 0.14);
+      setInfo('Suara & bicara aktif');
+    } else {
+      setInfo('Suara dimatikan');
+    }
+  }
+
+  function showPopup(tag, message, themeClass) {
+    var wrap = document.getElementById('toastWrap');
+    if (!wrap) return;
+    clearTimeout(toastTimer);
+    wrap.innerHTML = '<div class="toast-box ' + (themeClass || '') + '" id="activeToast">' +
+      '<span class="toast-tag">' + esc(tag) + '</span>' +
+      '<span class="toast-msg">' + esc(message) + '</span>' +
+    '</div>';
+    requestAnimationFrame(function() {
+      var el = document.getElementById('activeToast');
+      if (el) el.className = 'toast-box ' + (themeClass || '') + ' show';
+    });
+    toastTimer = setTimeout(function() {
+      var el = document.getElementById('activeToast');
+      if (el) el.className = 'toast-box ' + (themeClass || '');
+      setTimeout(function() {
+        if (wrap) wrap.innerHTML = '';
+      }, 220);
+    }, 2300);
+  }
+
+  function copyTextSafe(txt, doneMsg) {
+    if (!txt) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).catch(function() {});
+    }
+    setInfo(doneMsg || 'Tersalin!');
+  }
+
+  function makeSeat(idx, prev) {
+    return {
+      id: idx + 1,
+      tiktok: (prev && prev.tiktok) ? prev.tiktok : '',
+      name: (prev && prev.name) ? prev.name : '',
+      displayName: (prev && prev.displayName) ? prev.displayName : '',
+      avatarUrl: (prev && prev.avatarUrl) ? prev.avatarUrl : '',
+      val: (prev && prev.val) ? Number(prev.val) : 0,
+      locked: Boolean(prev && prev.locked),
+      isBin: Boolean(prev && prev.isBin),
+      paid: Boolean(prev && prev.paid)
+    };
+  }
+
+  function initSeats() {
+    var old = seats.slice();
+    seats = [];
+    var k = 0;
+    while (k < cfg.count) {
+      seats.push(makeSeat(k, old[k]));
+      k++;
+    }
+
+    document.getElementById('inCount').value = cfg.count;
+    document.getElementById('inOb').value = cfg.ob;
+    document.getElementById('inInc').value = cfg.inc;
+    document.getElementById('inBin').value = cfg.bin;
+    document.getElementById('inBinNote').value = cfg.binNote;
+
+    document.getElementById('dOb').innerText = rFmt(cfg.ob);
+    document.getElementById('dInc').innerText = rFmt(cfg.inc);
+    document.getElementById('dBin').innerText = rFmt(cfg.bin);
+    document.getElementById('dBinNote').innerText = cfg.binNote || '-';
+    render();
+  }
+
+  function renderAvatarBox(url, fallbackText) {
+    var div = document.createElement('div');
+    div.className = 'ava-box';
+    if (url) {
+      var img = document.createElement('img');
+      img.src = url;
+      img.alt = 'ava';
+      img.onerror = function() {
+        div.innerHTML = '';
+        div.textContent = fallbackText;
+      };
+      div.appendChild(img);
+    } else {
+      div.textContent = fallbackText;
+    }
+    return div.outerHTML;
+  }
+
+  function renderTikTokCell(seat, idx) {
+    var tName = (seat.tiktok || '').trim();
+    if (!tName) {
+      return '<div class="copy-box"><span class="tt-txt box-empty">-</span></div>';
+    }
+    return '<div class="copy-box" title="TikTok: ' + esc(tName) + '">' +
+      '<span class="tt-txt">' + esc(tName) + '</span>' +
+      '<button type="button" class="copy-mini" onclick="copySeatTikTok(' + idx + ')">Copy</button>' +
+    '</div>';
+  }
+
+  function renderDisplayCell(seat, idx) {
+    var dName = (seat.displayName || '').trim();
+    if (!dName) {
+      return '<div class="copy-box"><span class="disp-txt box-empty">-</span></div>';
+    }
+    return '<div class="copy-box" title="Display: ' + esc(dName) + '">' +
+      '<span class="disp-txt">' + esc(dName) + '</span>' +
+      '<button type="button" class="copy-mini" onclick="copySeatDisplay(' + idx + ')">Copy</button>' +
+    '</div>';
+  }
+
+  function copySeatTikTok(idx) {
+    var st = seats[idx];
+    if (!st || !st.tiktok) return;
+    copyTextSafe(st.tiktok.trim(), 'TikTok #' + st.id + ' tersalin!');
+  }
+
+  function copySeatDisplay(idx) {
+    var st = seats[idx];
+    if (!st || !st.displayName) return;
+    copyTextSafe(st.displayName.trim(), 'Display #' + st.id + ' tersalin!');
+  }
+
+  function copyModalTikTok() {
+    var val = document.getElementById('tiktokInput').value.trim();
+    if (!val) return;
+    copyTextSafe(val, 'TikTok tersalin!');
+  }
+
+  function copyModalDisplay() {
+    var val = document.getElementById('displayInput').value.trim();
+    if (!val) return;
+    copyTextSafe(val, 'Display tersalin!');
+  }
+
+  function render() {
+    var leftHtml = '';
+    var rightHtml = '';
+    var split = Math.ceil(seats.length / 2);
+    var filled = 0, total = 0, paidCount = 0, paidAmount = 0, unpaidAmount = 0;
+
+    var idx = 0;
+    while (idx < seats.length) {
+      var st = seats[idx];
+      var labelSource = st.name || st.tiktok || st.displayName;
+      if (labelSource) {
+        filled++;
+        total += Number(st.val || 0);
+        if (st.paid) { paidCount++; paidAmount += Number(st.val || 0); }
+        else { unpaidAmount += Number(st.val || 0); }
+      }
+
+      var badge = 'OPEN', bCls = '', rowCls = 'seat-row';
+      if (st.isBin) { badge = 'B.I.N'; bCls = 'badge-bin'; rowCls += ' locked bin-row'; }
+      else if (st.locked) { badge = 'LOCK'; bCls = 'badge-lock'; rowCls += ' locked'; }
+      else if (labelSource) { badge = 'TAKE'; bCls = 'badge-bid'; rowCls += ' has-bid'; }
+
+      var payHtml = labelSource
+        ? '<button type="button" class="pay-btn ' + (st.paid ? 'paid' : 'unpaid') + '" onclick="togglePaid(' + idx + ')">' + (st.paid ? 'OKE' : 'WAIT') + '</button>'
+        : '<span style="color:#64748b;font-size:9px;">-</span>';
+
+      var cached = st.name ? robloxCache[st.name.toLowerCase()] : null;
+      var avaUrl = st.avatarUrl || (cached && cached.avatarUrl) || '';
+      var avaHtml = labelSource
+        ? renderAvatarBox(avaUrl, initialChar(st.name || st.displayName || st.tiktok))
+        : '<div class="ava-box" style="color:#64748b;">&bull;</div>';
+
+      var usnHtml = st.name
+        ? '<div class="r-name" title="Roblox: ' + esc(st.name) + '">' + esc(st.name) + '</div>'
+        : '<div class="r-name r-empty">' + ((st.tiktok || st.displayName) ? '-' : 'Kosong') + '</div>';
+
+      var oneRow = '<div class="' + rowCls + '">' +
+        '<div class="r-no">#' + st.id + '</div>' +
+        renderTikTokCell(st, idx) +
+        renderDisplayCell(st, idx) +
+        '<div class="player-cell">' + avaHtml + usnHtml + '</div>' +
+        '<div><span class="r-badge ' + bCls + '">' + badge + '</span></div>' +
+        '<div class="r-val">' + (st.val > 0 ? rFmt(st.val) : rFmt(cfg.ob)) + '</div>' +
+        '<div>' + payHtml + '</div>' +
+        '<div class="r-actions">' +
+          '<button type="button" class="b-gold" onclick="openModal(' + idx + ', false)" ' + (st.locked ? 'disabled' : '') + '>TAKE</button>' +
+          '<button type="button" class="b-gray" onclick="quickBump(' + idx + ')" ' + ((!labelSource || st.locked) ? 'disabled' : '') + '>+' + cfg.inc + '</button>' +
+          '<button type="button" class="b-purple" onclick="openModal(' + idx + ', true)" ' + (st.locked ? 'disabled' : '') + '>B.I.N</button>' +
+          '<button type="button" class="' + (st.locked ? 'b-red' : 'b-green') + '" onclick="toggleLock(' + idx + ')">' + (st.locked ? 'Buka' : 'Lock') + '</button>' +
+        '</div>' +
+      '</div>';
+
+      if (idx < split) leftHtml += oneRow;
+      else rightHtml += oneRow;
+      idx++;
+    }
+
+    document.getElementById('colLeft').innerHTML = leftHtml;
+    document.getElementById('colRight').innerHTML = rightHtml;
+
+    document.getElementById('dSlot').innerText = filled + '/' + cfg.count;
+    document.getElementById('dTotal').innerText = rFmt(total);
+    document.getElementById('wPaidCnt').innerText = paidCount + '/' + filled;
+    document.getElementById('wPaidSum').innerText = rFmt(paidAmount);
+    document.getElementById('wUnpaidSum').innerText = rFmt(unpaidAmount);
+  }
+
+  function updateModalPreview(url, name) {
+    currentModalAvatar = url || '';
+    var box = document.getElementById('avaPreview');
+    box.innerHTML = '';
+    if (url) {
+      var img = document.createElement('img');
+      img.src = url;
+      img.alt = 'preview';
+      img.onerror = function() {
+        box.innerHTML = '';
+        box.textContent = initialChar(name);
+      };
+      box.appendChild(img);
+    } else {
+      box.textContent = initialChar(name);
+    }
+  }
+
+  function applyFoundRobloxProfile(key, uname, info) {
+    var prev = robloxCache[key] || {};
+    var merged = {
+      displayName: info.displayName || prev.displayName || '',
+      avatarUrl: info.avatarUrl || prev.avatarUrl || ''
+    };
+    robloxCache[key] = merged;
+
+    if (document.getElementById('bidderInput').value.trim().toLowerCase() !== key) return;
+
+    if (!manualDisplayOverride && merged.displayName) {
+      document.getElementById('displayInput').value = merged.displayName;
+    }
+    if (!manualAvatarOverride && merged.avatarUrl) {
+      updateModalPreview(merged.avatarUrl, uname);
+    }
+
+    var statusParts = [];
+    if (merged.displayName) statusParts.push('Display: ' + merged.displayName);
+    if (merged.avatarUrl) statusParts.push('Ava OK');
+    document.getElementById('avaStatus').innerText = statusParts.length ? statusParts.join(' • ') : 'Profil ditemukan';
+  }
+
+  function lookupRobloxUser(rawName) {
+    var uname = String(rawName || '').trim();
+    var stEl = document.getElementById('avaStatus');
+    var fallbackInit = uname || document.getElementById('tiktokInput').value.trim();
+
+    if (!uname) {
+      if (!manualAvatarOverride) updateModalPreview('', fallbackInit);
+      stEl.innerText = 'Isi Nama TikTok & Username Roblox';
+      return;
+    }
+
+    var key = uname.toLowerCase();
+    if (robloxCache[key] && (robloxCache[key].displayName || robloxCache[key].avatarUrl)) {
+      applyFoundRobloxProfile(key, uname, robloxCache[key]);
+      return;
+    }
+
+    if (!manualAvatarOverride) updateModalPreview('', fallbackInit);
+    stEl.innerText = 'Mencari Display & Ava...';
+
+    if (!window.fetch || window.location.protocol === 'file:') {
+      stEl.innerText = 'Buka lewat link Netlify (isi manual / foto)';
+      return;
+    }
+
+    fetch('/.netlify/functions/roblox-lookup?u=' + encodeURIComponent(uname))
+      .then(function(res) { return res.ok ? res.json() : null; })
+      .then(function(data) {
+        if (data && data.ok) {
+          applyFoundRobloxProfile(key, uname, {
+            displayName: data.displayName || '',
+            avatarUrl: data.avatarUrl || ''
+          });
+        } else if (document.getElementById('bidderInput').value.trim().toLowerCase() === key) {
+          stEl.innerText = 'Username tidak ketemu (isi manual / foto)';
+        }
+      })
+      .catch(function() {
+        if (document.getElementById('bidderInput').value.trim().toLowerCase() === key) {
+          stEl.innerText = 'Function Netlify belum aktif (isi manual / foto)';
+        }
+      });
+  }
+
+  document.getElementById('tiktokInput').addEventListener('input', function() {
+    var rblxVal = document.getElementById('bidderInput').value.trim();
+    if (!manualAvatarOverride && !currentModalAvatar && !rblxVal) {
+      updateModalPreview('', this.value);
+    }
+  });
+
+  document.getElementById('bidderInput').addEventListener('input', function() {
+    var val = this.value;
+    manualDisplayOverride = false;
+    if (!manualAvatarOverride) {
+      currentModalAvatar = '';
+      updateModalPreview('', val || document.getElementById('tiktokInput').value);
+    }
+    clearTimeout(lookupTimer);
+    lookupTimer = setTimeout(function() {
+      lookupRobloxUser(val);
+    }, 350);
+  });
+
+  document.getElementById('displayInput').addEventListener('input', function() {
+    manualDisplayOverride = true;
+  });
+
+  function clearCustomAva() {
+    manualAvatarOverride = false;
+    currentModalAvatar = '';
+    document.getElementById('avaFileInput').value = '';
+    document.getElementById('avaUrlInput').value = '';
+    var uname = document.getElementById('bidderInput').value.trim();
+    var initSrc = uname || document.getElementById('tiktokInput').value.trim();
+    var cached = uname ? robloxCache[uname.toLowerCase()] : null;
+    if (cached && cached.avatarUrl) {
+      updateModalPreview(cached.avatarUrl, initSrc);
+      document.getElementById('avaStatus').innerText = 'Kembali ke Ava Roblox';
+    } else {
+      updateModalPreview('', initSrc);
+      document.getElementById('avaStatus').innerText = 'Pakai inisial';
+    }
+  }
+
+  document.getElementById('avaFileInput').addEventListener('change', function() {
+    var file = this.files && this.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      manualAvatarOverride = true;
+      document.getElementById('avaUrlInput').value = '';
+      var initSrc = document.getElementById('bidderInput').value.trim() || document.getElementById('tiktokInput').value.trim();
+      updateModalPreview(ev.target.result, initSrc);
+      document.getElementById('avaStatus').innerText = 'Foto lokal dipilih';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('avaUrlInput').addEventListener('input', function() {
+    var url = this.value.trim();
+    var initSrc = document.getElementById('bidderInput').value.trim() || document.getElementById('tiktokInput').value.trim();
+    if (url) {
+      manualAvatarOverride = true;
+      updateModalPreview(url, initSrc);
+      document.getElementById('avaStatus').innerText = 'URL/path gambar aktif';
+    } else if (!manualAvatarOverride) {
+      var uname = document.getElementById('bidderInput').value.trim();
+      var cached = uname ? robloxCache[uname.toLowerCase()] : null;
+      updateModalPreview((cached && cached.avatarUrl) || '', initSrc);
+    }
+  });
+
+  function openModal(index, isBinAction) {
+    activeSeatIndex = index;
+    forceBinMode = Boolean(isBinAction);
+    manualAvatarOverride = false;
+    manualDisplayOverride = false;
+    document.getElementById('avaFileInput').value = '';
+
+    var seat = seats[index];
+    document.getElementById('modalTitle').innerText = isBinAction
+      ? 'B.I.N Kursi #' + seat.id + ' (' + rFmt(cfg.bin) + ')'
+      : 'TAKE Kursi #' + seat.id;
+    document.getElementById('tiktokInput').value = seat.tiktok || '';
+    document.getElementById('displayInput').value = seat.displayName || '';
+    document.getElementById('bidderInput').value = seat.name || '';
+    document.getElementById('amountInput').value = isBinAction
+      ? Number(cfg.bin)
+      : (seat.val > 0 ? Number(seat.val) + Number(cfg.inc) : Number(cfg.ob));
+
+    var savedAva = seat.avatarUrl || '';
+    var isData = savedAva.indexOf('data:image') === 0;
+    document.getElementById('avaUrlInput').value = isData ? '' : savedAva;
+    if (isData || savedAva) manualAvatarOverride = true;
+    if (seat.displayName) manualDisplayOverride = true;
+
+    updateModalPreview(savedAva, seat.name || seat.displayName || seat.tiktok || '');
+    document.getElementById('avaStatus').innerText = seat.name
+      ? 'Mengecek Display & Ava...'
+      : 'Isi Nama TikTok & Username Roblox';
+
+    document.getElementById('bidModal').className = 'modal active';
+    document.getElementById('tiktokInput').focus();
+    if (seat.name) lookupRobloxUser(seat.name);
+  }
+
+  function closeModal() {
+    clearTimeout(lookupTimer);
+    document.getElementById('bidModal').className = 'modal';
+    activeSeatIndex = null;
+    forceBinMode = false;
+    currentModalAvatar = '';
+    manualAvatarOverride = false;
+    manualDisplayOverride = false;
+  }
+
+  function addBid(multiplier) {
+    var input = document.getElementById('amountInput');
+    input.value = Number(input.value || 0) + (Number(cfg.inc) * multiplier);
+  }
+
+  function setBinVal() {
+    forceBinMode = true;
+    document.getElementById('amountInput').value = Number(cfg.bin);
+  }
+
+  function saveBid() {
+    if (activeSeatIndex === null) return;
+    var idx = activeSeatIndex;
+    var tt = document.getElementById('tiktokInput').value.trim();
+    var disp = document.getElementById('displayInput').value.trim();
+    var name = document.getElementById('bidderInput').value.trim();
+    var urlInput = document.getElementById('avaUrlInput').value.trim();
+    var val = Number(document.getElementById('amountInput').value || 0);
+
+    var savedBin = false;
+    var whoLabel = '';
+    var spokenName = '';
+
+    if (!tt && !name && !disp) {
+      seats[idx] = makeSeat(idx, null);
+    } else {
+      var cached = name ? robloxCache[name.toLowerCase()] : null;
+      var finalDisp = disp || (cached && cached.displayName) || '';
+      var finalAva = urlInput || currentModalAvatar || (cached && cached.avatarUrl) || '';
+
+      seats[idx].tiktok = tt;
+      seats[idx].name = name;
+      seats[idx].displayName = finalDisp;
+      seats[idx].avatarUrl = finalAva;
+      seats[idx].val = val;
+      if (forceBinMode || val >= Number(cfg.bin)) {
+        seats[idx].isBin = true;
+        seats[idx].locked = true;
+        savedBin = true;
+      } else {
+        seats[idx].isBin = false;
+      }
+      whoLabel = finalDisp || tt || name;
+      spokenName = finalDisp || name || tt;
+    }
+
+    render();
+    closeModal();
+
+    if (whoLabel) {
+      soundSeatSaved(savedBin, spokenName, idx + 1);
+      if (savedBin) {
+        showPopup('B.I.N LOCK', whoLabel + ' berada di kursi #' + (idx + 1) + ' (' + rFmt(val) + ')', 't-bin');
+      } else {
+        showPopup('KURSI TERSIMPAN', whoLabel + ' berada di kursi #' + (idx + 1) + ' (' + rFmt(val) + ')', '');
+      }
+    }
+  }
+
+  function quickBump(index) {
+    var st = seats[index];
+    if (st.locked || (!st.name && !st.tiktok && !st.displayName)) return;
+    st.val = Number(st.val || 0) + Number(cfg.inc);
+    var hitBin = false;
+    if (st.val >= Number(cfg.bin)) {
+      st.val = Number(cfg.bin);
+      st.isBin = true;
+      st.locked = true;
+      hitBin = true;
+    }
+    render();
+    var who = st.displayName || st.tiktok || st.name;
+    var spoken = st.displayName || st.name || st.tiktok;
+    soundSeatSaved(hitBin, spoken, st.id);
+    showPopup(hitBin ? 'B.I.N LOCK' : 'UPDATE KURSI', who + ' berada di kursi #' + st.id + ' (' + rFmt(st.val) + ')', hitBin ? 't-bin' : '');
+  }
+
+  function toggleLock(index) {
+    seats[index].locked = !seats[index].locked;
+    if (!seats[index].locked) seats[index].isBin = false;
+    render();
+  }
+
+  function togglePaid(index) {
+    if (!seats[index].name && !seats[index].tiktok && !seats[index].displayName) return;
+    seats[index].paid = !seats[index].paid;
+    render();
+  }
+
+  function saveCfg() {
+    cfg.count = Number(document.getElementById('inCount').value) || 19;
+    cfg.ob = Number(document.getElementById('inOb').value) || 0;
+    cfg.inc = Number(document.getElementById('inInc').value) || 1;
+    cfg.bin = Number(document.getElementById('inBin').value) || 0;
+    cfg.binNote = document.getElementById('inBinNote').value.trim();
+    initSeats();
+    setInfo('Tersimpan!');
+  }
+
+  function formatSec(sec) {
+    var mins = String(Math.floor(sec / 60));
+    if (mins.length < 2) mins = '0' + mins;
+    var secs = String(sec % 60);
+    if (secs.length < 2) secs = '0' + secs;
+    return mins + ':' + secs;
+  }
+
+  function setTimerFromInput() {
+    var sec = Number(document.getElementById('timerInput').value);
+    if (!sec || sec <= 0) return;
+    clearInterval(timerInterval);
+    timeLeft = sec;
+    isPaused = false;
+    spokenSecMap = {};
+    document.getElementById('pauseBtn').innerText = '||';
+    updateTimerDisplay();
+
+    soundStartAuction();
+    showPopup('MULAI LELANG', 'Lele dimulai • ' + formatSec(sec), 't-start');
+
+    if (timeLeft >= 1 && timeLeft <= 10 && !spokenSecMap[timeLeft]) {
+      spokenSecMap[timeLeft] = true;
+      setTimeout(function() { soundTickCountdown(timeLeft); }, 950);
+    }
+
+    timerInterval = setInterval(function() {
+      if (!isPaused) {
+        timeLeft--;
+        updateTimerDisplay();
+
+        if (timeLeft >= 1 && timeLeft <= 10 && !spokenSecMap[timeLeft]) {
+          spokenSecMap[timeLeft] = true;
+          soundTickCountdown(timeLeft);
+          if (timeLeft === 10 || timeLeft <= 3) {
+            showPopup('HITUNG MUNDUR', String(timeLeft), 't-warn');
+          }
+        }
+
+        if (timeLeft <= 0) {
+          timeLeft = 0;
+          updateTimerDisplay();
+          clearInterval(timerInterval);
+          soundFinishAuction();
+          showPopup('WAKTU SELESAI', 'Waktu selesai', 't-warn');
+        }
+      }
+    }, 1000);
+  }
+
+  function togglePause() {
+    if (timeLeft <= 0) return;
+    isPaused = !isPaused;
+    document.getElementById('pauseBtn').innerText = isPaused ? '>' : '||';
+  }
+
+  function stopTimer() {
+    clearInterval(timerInterval);
+    timeLeft = 0;
+    isPaused = false;
+    spokenSecMap = {};
+    document.getElementById('pauseBtn').innerText = '||';
+    updateTimerDisplay();
+  }
+
+  function updateTimerDisplay() {
+    var el = document.getElementById('timer');
+    el.innerText = formatSec(timeLeft);
+    el.className = (timeLeft <= 10 && timeLeft > 0) ? 'timer-txt warn' : 'timer-txt';
+  }
+
+  function copyAllTikTok() {
+    var lines = [];
+    var idx = 0;
+    while (idx < seats.length) {
+      var s = seats[idx];
+      if (s.tiktok && s.tiktok.trim()) {
+        lines.push('#' + s.id + ': ' + s.tiktok.trim());
+      }
+      idx++;
+    }
+    if (!lines.length) {
+      setInfo('Belum ada Nama TikTok!');
+      return;
+    }
+    copyTextSafe(lines.join('\n'), 'Semua TikTok tersalin!');
+  }
+
+  function copyAllDisplays() {
+    var lines = [];
+    var idx = 0;
+    while (idx < seats.length) {
+      var s = seats[idx];
+      if (s.displayName && s.displayName.trim()) {
+        lines.push('#' + s.id + ': ' + s.displayName.trim());
+      }
+      idx++;
+    }
+    if (!lines.length) {
+      setInfo('Belum ada Display Name!');
+      return;
+    }
+    copyTextSafe(lines.join('\n'), 'Semua Display tersalin!');
+  }
+
+  function copyList() {
+    var lines = [];
+    var idx = 0;
+    while (idx < seats.length) {
+      var s = seats[idx];
+      if (!s.name && !s.tiktok && !s.displayName) {
+        lines.push('#' + s.id + ': -');
+      } else {
+        var parts = [];
+        if (s.tiktok) parts.push('TT: ' + s.tiktok);
+        if (s.displayName) parts.push('Display: ' + s.displayName);
+        if (s.name) parts.push('USN: ' + s.name);
+        lines.push('#' + s.id + ': ' + parts.join(' | ') + ' [' + rFmt(s.val) + (s.isBin ? ' B.I.N' : '') + '] - ' + (s.paid ? 'OKE' : 'WAIT'));
+      }
+      idx++;
+    }
+    copyTextSafe(lines.join('\n'), 'List tersalin!');
+  }
+
+  function resetAll() {
+    seats = [];
+    initSeats();
+    setInfo('Direset!');
+  }
+
+  document.getElementById('bidModal').onkeypress = function(e) {
+    if (e.key === 'Enter') saveBid();
+  };
+
+  initSeats();
+</script>
+</body>
+</html>
