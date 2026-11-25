@@ -135,7 +135,7 @@
     justify-content: center; align-items: center; z-index: 100;
   }
   .modal.active { display: flex; }
-  .modal-content { background: #151f32; padding: 14px; border-radius: 9px; width: 330px; border: 2px solid #fbbf24; }
+  .modal-content { background: #151f32; padding: 14px; border-radius: 9px; width: 335px; border: 2px solid #fbbf24; }
   .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 8px; }
   .modal-head h3 { color: #fbbf24; font-size: 14px; }
   .ava-preview {
@@ -227,17 +227,21 @@
     <div class="modal-head">
       <div>
         <h3 id="modalTitle">Kursi #1</h3>
-        <div class="ava-status" id="avaStatus">Ketik username untuk cek Display & Ava</div>
+        <div class="ava-status" id="avaStatus">Isi Nama TikTok & Username Roblox</div>
       </div>
       <div class="ava-preview" id="avaPreview">?</div>
     </div>
 
     <div class="form-group">
-      <label>Username Roblox</label>
+      <label>1. Nama TikTok</label>
+      <input type="text" id="tiktokInput" placeholder="Contoh: @nama_tiktok...">
+    </div>
+    <div class="form-group">
+      <label>2. Username Roblox (Otomatis Cek Display & Ava)</label>
       <input type="text" id="bidderInput" placeholder="Ketik username Roblox...">
     </div>
     <div class="form-group">
-      <label>Display Name (Otomatis / Bisa Diedit & Di-Copy)</label>
+      <label>3. Display Name (Otomatis / Bisa Diedit & Di-Copy)</label>
       <div class="input-copy-row">
         <input type="text" id="displayInput" placeholder="Display name muncul di sini...">
         <button type="button" class="b-blue" style="padding:5px 8px;font-size:10px;" onclick="copyModalDisplay()">Copy</button>
@@ -313,6 +317,7 @@
   function makeSeat(idx, prev) {
     return {
       id: idx + 1,
+      tiktok: (prev && prev.tiktok) ? prev.tiktok : '',
       name: (prev && prev.name) ? prev.name : '',
       displayName: (prev && prev.displayName) ? prev.displayName : '',
       avatarUrl: (prev && prev.avatarUrl) ? prev.avatarUrl : '',
@@ -384,7 +389,8 @@
     var idx = 0;
     while (idx < seats.length) {
       var st = seats[idx];
-      if (st.name) {
+      var labelSource = st.name || st.tiktok;
+      if (labelSource) {
         filled++;
         total += Number(st.val || 0);
         if (st.paid) { paidCount++; paidAmount += Number(st.val || 0); }
@@ -394,20 +400,23 @@
       var badge = 'OPEN', bCls = '', rowCls = 'seat-row';
       if (st.isBin) { badge = 'B.I.N'; bCls = 'badge-bin'; rowCls += ' locked bin-row'; }
       else if (st.locked) { badge = 'LOCK'; bCls = 'badge-lock'; rowCls += ' locked'; }
-      else if (st.name) { badge = 'TAKE'; bCls = 'badge-bid'; rowCls += ' has-bid'; }
+      else if (labelSource) { badge = 'TAKE'; bCls = 'badge-bid'; rowCls += ' has-bid'; }
 
-      var payHtml = st.name
+      var payHtml = labelSource
         ? '<button type="button" class="pay-btn ' + (st.paid ? 'paid' : 'unpaid') + '" onclick="togglePaid(' + idx + ')">' + (st.paid ? 'OKE' : 'WAIT') + '</button>'
         : '<span style="color:#64748b;font-size:9px;">-</span>';
 
       var cached = st.name ? robloxCache[st.name.toLowerCase()] : null;
       var avaUrl = st.avatarUrl || (cached && cached.avatarUrl) || '';
-      var avaHtml = st.name
-        ? renderAvatarBox(avaUrl, initialChar(st.name))
+      var avaHtml = labelSource
+        ? renderAvatarBox(avaUrl, initialChar(labelSource))
         : '<div class="ava-box" style="color:#64748b;">•</div>';
 
-      var nameHtml = st.name
-        ? '<div class="r-name" title="' + esc(st.name) + '">' + esc(st.name) + '</div>'
+      var titleParts = [];
+      if (st.tiktok) titleParts.push('TT: ' + st.tiktok);
+      if (st.name) titleParts.push('RBLX: ' + st.name);
+      var nameHtml = labelSource
+        ? '<div class="r-name" title="' + esc(titleParts.join(' | ')) + '">' + esc(labelSource) + '</div>'
         : '<div class="r-name r-empty">Kosong</div>';
 
       var oneRow = '<div class="' + rowCls + '">' +
@@ -419,7 +428,7 @@
         '<div>' + payHtml + '</div>' +
         '<div class="r-actions">' +
           '<button type="button" class="b-gold" onclick="openModal(' + idx + ', false)" ' + (st.locked ? 'disabled' : '') + '>TAKE</button>' +
-          '<button type="button" class="b-gray" onclick="quickBump(' + idx + ')" ' + ((!st.name || st.locked) ? 'disabled' : '') + '>+' + cfg.inc + '</button>' +
+          '<button type="button" class="b-gray" onclick="quickBump(' + idx + ')" ' + ((!labelSource || st.locked) ? 'disabled' : '') + '>+' + cfg.inc + '</button>' +
           '<button type="button" class="b-purple" onclick="openModal(' + idx + ', true)" ' + (st.locked ? 'disabled' : '') + '>B.I.N</button>' +
           '<button type="button" class="' + (st.locked ? 'b-red' : 'b-green') + '" onclick="toggleLock(' + idx + ')">' + (st.locked ? 'Buka' : 'Lock') + '</button>' +
         '</div>' +
@@ -476,9 +485,11 @@
   function lookupRobloxUser(rawName) {
     var uname = String(rawName || '').trim();
     var stEl = document.getElementById('avaStatus');
+    var fallbackInit = uname || document.getElementById('tiktokInput').value.trim();
+
     if (!uname) {
-      if (!manualAvatarOverride) updateModalPreview('', '');
-      stEl.innerText = 'Ketik username untuk cek Display & Ava';
+      if (!manualAvatarOverride) updateModalPreview('', fallbackInit);
+      stEl.innerText = 'Isi Nama TikTok & Username Roblox';
       return;
     }
 
@@ -488,7 +499,7 @@
       return;
     }
 
-    if (!manualAvatarOverride) updateModalPreview('', uname);
+    if (!manualAvatarOverride) updateModalPreview('', fallbackInit);
     stEl.innerText = 'Mencari Display & Ava...';
 
     if (!window.fetch || window.location.protocol === 'file:') {
@@ -515,12 +526,19 @@
       });
   }
 
+  document.getElementById('tiktokInput').addEventListener('input', function() {
+    var rblxVal = document.getElementById('bidderInput').value.trim();
+    if (!manualAvatarOverride && !currentModalAvatar && !rblxVal) {
+      updateModalPreview('', this.value);
+    }
+  });
+
   document.getElementById('bidderInput').addEventListener('input', function() {
     var val = this.value;
     manualDisplayOverride = false;
     if (!manualAvatarOverride) {
       currentModalAvatar = '';
-      updateModalPreview('', val);
+      updateModalPreview('', val || document.getElementById('tiktokInput').value);
     }
     clearTimeout(lookupTimer);
     lookupTimer = setTimeout(function() {
@@ -538,12 +556,13 @@
     document.getElementById('avaFileInput').value = '';
     document.getElementById('avaUrlInput').value = '';
     var uname = document.getElementById('bidderInput').value.trim();
+    var initSrc = uname || document.getElementById('tiktokInput').value.trim();
     var cached = uname ? robloxCache[uname.toLowerCase()] : null;
     if (cached && cached.avatarUrl) {
-      updateModalPreview(cached.avatarUrl, uname);
+      updateModalPreview(cached.avatarUrl, initSrc);
       document.getElementById('avaStatus').innerText = 'Kembali ke Ava Roblox';
     } else {
-      updateModalPreview('', uname);
+      updateModalPreview('', initSrc);
       document.getElementById('avaStatus').innerText = 'Pakai inisial';
     }
   }
@@ -555,8 +574,8 @@
     reader.onload = function(ev) {
       manualAvatarOverride = true;
       document.getElementById('avaUrlInput').value = '';
-      var uname = document.getElementById('bidderInput').value.trim();
-      updateModalPreview(ev.target.result, uname);
+      var initSrc = document.getElementById('bidderInput').value.trim() || document.getElementById('tiktokInput').value.trim();
+      updateModalPreview(ev.target.result, initSrc);
       document.getElementById('avaStatus').innerText = 'Foto lokal dipilih';
     };
     reader.readAsDataURL(file);
@@ -564,14 +583,15 @@
 
   document.getElementById('avaUrlInput').addEventListener('input', function() {
     var url = this.value.trim();
-    var uname = document.getElementById('bidderInput').value.trim();
+    var initSrc = document.getElementById('bidderInput').value.trim() || document.getElementById('tiktokInput').value.trim();
     if (url) {
       manualAvatarOverride = true;
-      updateModalPreview(url, uname);
+      updateModalPreview(url, initSrc);
       document.getElementById('avaStatus').innerText = 'URL/path gambar aktif';
     } else if (!manualAvatarOverride) {
+      var uname = document.getElementById('bidderInput').value.trim();
       var cached = uname ? robloxCache[uname.toLowerCase()] : null;
-      updateModalPreview((cached && cached.avatarUrl) || '', uname);
+      updateModalPreview((cached && cached.avatarUrl) || '', initSrc);
     }
   });
 
@@ -586,6 +606,7 @@
     document.getElementById('modalTitle').innerText = isBinAction
       ? 'B.I.N Kursi #' + seat.id + ' (' + rFmt(cfg.bin) + ')'
       : 'TAKE Kursi #' + seat.id;
+    document.getElementById('tiktokInput').value = seat.tiktok || '';
     document.getElementById('bidderInput').value = seat.name || '';
     document.getElementById('displayInput').value = seat.displayName || '';
     document.getElementById('amountInput').value = isBinAction
@@ -598,13 +619,13 @@
     if (isData || savedAva) manualAvatarOverride = true;
     if (seat.displayName) manualDisplayOverride = true;
 
-    updateModalPreview(savedAva, seat.name || '');
+    updateModalPreview(savedAva, seat.name || seat.tiktok || '');
     document.getElementById('avaStatus').innerText = seat.name
       ? 'Mengecek Display & Ava...'
-      : 'Ketik username untuk cek Display & Ava';
+      : 'Isi Nama TikTok & Username Roblox';
 
     document.getElementById('bidModal').className = 'modal active';
-    document.getElementById('bidderInput').focus();
+    document.getElementById('tiktokInput').focus();
     if (seat.name) lookupRobloxUser(seat.name);
   }
 
@@ -630,18 +651,20 @@
 
   function saveBid() {
     if (activeSeatIndex === null) return;
+    var tt = document.getElementById('tiktokInput').value.trim();
     var name = document.getElementById('bidderInput').value.trim();
     var disp = document.getElementById('displayInput').value.trim();
     var urlInput = document.getElementById('avaUrlInput').value.trim();
     var val = Number(document.getElementById('amountInput').value || 0);
 
-    if (!name) {
+    if (!tt && !name) {
       seats[activeSeatIndex] = makeSeat(activeSeatIndex, null);
     } else {
-      var cached = robloxCache[name.toLowerCase()];
+      var cached = name ? robloxCache[name.toLowerCase()] : null;
       var finalDisp = disp || (cached && cached.displayName) || '';
       var finalAva = urlInput || currentModalAvatar || (cached && cached.avatarUrl) || '';
 
+      seats[activeSeatIndex].tiktok = tt;
       seats[activeSeatIndex].name = name;
       seats[activeSeatIndex].displayName = finalDisp;
       seats[activeSeatIndex].avatarUrl = finalAva;
@@ -658,12 +681,13 @@
   }
 
   function quickBump(index) {
-    if (seats[index].locked || !seats[index].name) return;
-    seats[index].val = Number(seats[index].val || 0) + Number(cfg.inc);
-    if (seats[index].val >= Number(cfg.bin)) {
-      seats[index].val = Number(cfg.bin);
-      seats[index].isBin = true;
-      seats[index].locked = true;
+    var st = seats[index];
+    if (st.locked || (!st.name && !st.tiktok)) return;
+    st.val = Number(st.val || 0) + Number(cfg.inc);
+    if (st.val >= Number(cfg.bin)) {
+      st.val = Number(cfg.bin);
+      st.isBin = true;
+      st.locked = true;
     }
     render();
   }
@@ -675,7 +699,7 @@
   }
 
   function togglePaid(index) {
-    if (!seats[index].name) return;
+    if (!seats[index].name && !seats[index].tiktok) return;
     seats[index].paid = !seats[index].paid;
     render();
   }
@@ -758,11 +782,14 @@
     var idx = 0;
     while (idx < seats.length) {
       var s = seats[idx];
-      if (!s.name) {
+      if (!s.name && !s.tiktok) {
         lines.push('#' + s.id + ': -');
       } else {
-        var dispPart = s.displayName ? ' | Display: ' + s.displayName : '';
-        lines.push('#' + s.id + ': ' + s.name + dispPart + ' [' + rFmt(s.val) + (s.isBin ? ' B.I.N' : '') + '] - ' + (s.paid ? 'OKE' : 'WAIT'));
+        var parts = [];
+        if (s.tiktok) parts.push('TT: ' + s.tiktok);
+        if (s.name) parts.push('RBLX: ' + s.name);
+        if (s.displayName) parts.push('Display: ' + s.displayName);
+        lines.push('#' + s.id + ': ' + parts.join(' | ') + ' [' + rFmt(s.val) + (s.isBin ? ' B.I.N' : '') + '] - ' + (s.paid ? 'OKE' : 'WAIT'));
       }
       idx++;
     }
